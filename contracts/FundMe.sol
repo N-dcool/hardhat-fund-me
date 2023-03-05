@@ -1,26 +1,49 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.15;
 
 import "./PriceConverter.sol";
 
-error NotOwner();
+error FundMe__NotOwner();
 
+/**
+ * @title A contract for crowd funding.
+ * @author Naresh Choudhary
+ * @notice this contract is to demo a simple funding contract 
+ * @dev this implements price feeds as our library
+ */
 contract FundMe {
     using PriceConverter for uint256; 
 
+    //state variables!
     uint256 public constant MINIMUM_USD = 50 * 1e18;
     address public immutable i_owner;
+    address[] public funders;
+    mapping(address => uint256) public addressToAmount;
     
     AggregatorV3Interface public priceFeed;
 
+    //modifiers!
+    modifier OnlyOwner(){
+        //require(msg.sender == i_owner, "You are not the Owner of contract");
+        if(msg.sender != i_owner){
+            revert FundMe__NotOwner();
+        }
+        _;
+    }
+
+    //functions inorder !
     constructor(address priceFeedAddress) {
         i_owner = msg.sender;
         priceFeed = AggregatorV3Interface(priceFeedAddress);
     }
 
-    address[] public funders;
-    mapping(address => uint256) public addressToAmount;
+    receive() external payable{
+        fund();
+    }
+
+    fallback() external payable{
+        fund();
+    }
 
     function fund() public payable {
         require(msg.value.getConversionRate(priceFeed) >= MINIMUM_USD, " Not enough money send :( ");
@@ -41,20 +64,6 @@ contract FundMe {
 
     }
 
-    modifier OnlyOwner(){
-        //require(msg.sender == i_owner, "You are not the Owner of contract");
-        if(msg.sender != i_owner){
-            revert NotOwner();
-        }
-        _;
-    }
-
-    receive() external payable{
-        fund();
-    }
-
-    fallback() external payable{
-        fund();
-    }
+    
     
 }
